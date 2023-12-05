@@ -9,8 +9,8 @@ console.log('codes of 0 and 9', {min, max})
 
 const sum =  input.split('\n').map(line => {
     console.assert(line.length > 0, "lines should have at least 2 signs");
-    let left: string;
-    let right: string;
+    let left = '';
+    let right = '';
 
     for (let i =0; i < line.length; i++) {
         const code = line.charCodeAt(i);
@@ -30,3 +30,5 @@ const sum =  input.split('\n').map(line => {
 }).reduce((s, c) => s + c, 0);
 
 console.log({sum})
+
+export {};
