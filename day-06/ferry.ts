@@ -9,12 +9,16 @@ let distance: number[];
 let time: number[];
 let races: [number, number][];
 
+const shouldSanitizeKerning = process.argv.includes("--sanitize")
+
 rl.on('line', (line) => {
     const foo = line.split(':');
     console.assert(foo.length === 2);
     const [label, rawValues] = foo;
     console.assert(["Time", "Distance"].includes(label));
-    const values = rawValues.trim().split(/\s+/g).map(n => parseInt(n));
+    const values = shouldSanitizeKerning ?
+        [parseInt(rawValues.trim().replace(/\s+/g, ''))]
+        : rawValues.trim().split(/\s+/g).map(n => parseInt(n));
     if (label === "Time") {
         time = values;
     } else if (label === "Distance") {
@@ -26,7 +30,7 @@ rl.on('line', (line) => {
     }
 }).on('close', () => {
     let result = 1;
-    for(const [time, bestDistance] of races)  {
+    for (const [time, bestDistance] of races) {
         let count = 0;
         for (let i = 0; i < time; i += 1) {
             if ((time - i) * i > bestDistance) {
