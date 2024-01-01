@@ -1,3 +1,6 @@
+import * as process from "process";
+import * as console from "console";
+
 type Prettify<T> = {
     [K in keyof T]: T[K];
 } & {};
@@ -58,6 +61,27 @@ function getScore(hand: string) {
     return Number(String(rank) + foo.map((card) => cardToStr.get(card)).join(''))
 }
 
+function getJokerScore(hand: string) {
+    const counts = new Map<string, number>;
+    const foo: string[] = [];
+    let jokers = 0;
+    for (const c of hand) {
+        if (c === 'J') {
+            jokers += 1;
+        } else {
+            counts.set(c, (counts.get(c) || 0) + 1);
+        }
+        foo.push(c);
+    }
+    const foobar: [string, number][] = jokers === 5 ? [["J", 5]] : Array.from(counts.entries()).sort(([leftCard, leftCount], [rightCard, rightCount]) => leftCount === rightCount ? compareCard(leftCard, rightCard) : rightCount - leftCount);
+    if (jokers === 5) {
+        console.log("we have 5 jokers")
+    }
+    foobar[0][1] += jokers;
+    const rank = getRank(foobar.map(x => x[1]));
+    return Number(String(rank) + foo.map((card) => card === 'J' ? '01' : cardToStr.get(card)).join(''))
+}
+
 function compareCard(a: string, b: string) {
     return (cardScores.get(b) || 0) - (cardScores.get(a) || 0)
 }
@@ -87,18 +111,24 @@ const getRank = (values: Iterable<number>) => {
     }
 }
 
-export class Engine
-{
+export class Engine {
     result: ParsedHand[] = [];
 
-    addLine(line:string) {
+    constructor(readonly useJokers = false) {
+    }
+
+    addLine(line: string) {
         const [rawHand, rawScore] = line.split(' ');
         const bid = parseInt(rawScore);
-        this.result.push({rawHand, score: getScore(rawHand), bid})
+        const score = this.useJokers ? getJokerScore(rawHand) : getScore(rawHand);
+        this.result.push({rawHand, score, bid})
     }
 
     resolve() {
         const ranked = this.result.sort((left, right) => right.score - left.score).reverse();
+        if (this.useJokers) {
+            console.log(ranked.map(n => `${n.rawHand} ${n.bid}`).join('\n'))
+        }
         return ranked.map(({bid}, i) => bid * (i + 1)).reduce((acc, i) => acc + i, 0);
     }
 }
