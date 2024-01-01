@@ -1,6 +1,6 @@
 import {expect, test} from "bun:test";
 import {readFileSync} from "fs";
-import {Navigator} from "./navigator";
+import {GhostNavigator, Navigator} from "./navigator";
 
 
 test(`When each step takes to victory take one left step`, () => {
@@ -24,10 +24,12 @@ test(`When each step takes to victory take one right step`, () => {
 [
     {steps: 2, file: './input-sample-1.txt'},
     {steps: 6, file: './input-sample-2.txt'},
+    {steps: 6, file: './input-sample-3.txt', ghost: true},
     {steps: 18673, file: './input-personal.txt'},
-].forEach(({steps, file}) => {
-    test(`"${file}" should be solved in ${steps} steps`, () => {
-        const navigator = new Navigator;
+    {steps: 17972669116327, file: './input-personal.txt', ghost: true},
+].forEach(({steps, file, ghost = false}) => {
+    test(`"${file}" should be solved in ${steps} steps ghost=${ghost}`, () => {
+        const navigator = ghost ? new GhostNavigator : new Navigator;
         readFileSync(file).toString().split('\n').forEach(line => {
             navigator.addLine(line);
         })
