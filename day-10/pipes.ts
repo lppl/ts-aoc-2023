@@ -1,4 +1,3 @@
-
 const enum Direction {
     Top = "Top",
     Bottom = "Bottom",
@@ -49,6 +48,8 @@ const transitions: Record<Direction, Record<string, Direction>> = {
         "F": Direction.Bottom,
     },
 }
+
+const s = (v: any) => JSON.stringify(v)
 
 type Point = { x: number, y: number };
 
@@ -110,6 +111,68 @@ export function findFurthest(input: string, max = 1_000_000) {
 
         point = move(point, Steps[to]);
         from = opposite[to];
+    }
+
+    throw Error(`Answer not found in given steps; max=${max}.`);
+}
+
+export function countEnclosed(input: string, max = 1_000_000) {
+    const map = input.split("\n");
+    const w = map[0].length;
+    const h = map.length;
+    const steps = Object.values(Steps);
+
+    const marked = new Set<number>();
+
+    function toIndex(p: Point) {
+        return p.y * w + p.x;
+    }
+
+    function connectedTo(p: Point) {
+        return steps.map(step => move(p, step)).filter(point => (pointInMap(point) && signAt(point) === '.'));
+    }
+
+    function pointInMap(p: Point) {
+        return p.x >= 0 && p.y >= 0 && p.x < w && p.y < h;
+    }
+
+    function signAt(p: Point): string {
+        return map[p.y][p.x];
+    }
+
+    const outsiders: Point[] = [];
+
+    map.forEach((line, y) => {
+        if ((y === 0 || y === h - 1)) {
+            line.split('').forEach((sign, x) => {
+                if (sign === '.') {
+                    outsiders.push({x, y})
+                }
+            });
+        } else if(line.at(0) === '.') {
+            outsiders.push({x: 0, y})
+        } else if(line.at(-1) === '.') {
+            outsiders.push({x: w - 1, y})
+        }
+    });
+
+    let totalDots = 0;
+    for (let i = 0; i < input.length; i++) {
+        if (input.at(i) === '.') {
+            totalDots += 1;
+        }
+    }
+
+    for (let i = 0; i < max; i++) {
+        const p = outsiders.pop();
+        if (!p) {
+            return totalDots - marked.size;
+        }
+        const index = toIndex(p);
+        if (!marked.has(index)) {
+            marked.add(index);
+            outsiders.push(...(connectedTo(p)));
+        }
     }
 
     throw Error(`Answer not found in given steps; max=${max}.`);
