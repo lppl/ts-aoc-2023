@@ -116,64 +116,101 @@ export function findFurthest(input: string, max = 1_000_000) {
     throw Error(`Answer not found in given steps; max=${max}.`);
 }
 
-export function countEnclosed(input: string, max = 1_000_000) {
+
+export function getPath(input: string, max = 1_000_000): Point[] {
     const map = input.split("\n");
     const w = map[0].length;
-    const h = map.length;
-    const steps = Object.values(Steps);
 
-    const marked = new Set<number>();
+    const startIndex = input.replaceAll("\n", "").indexOf("S");
 
-    function toIndex(p: Point) {
-        return p.y * w + p.x;
-    }
-
-    function connectedTo(p: Point) {
-        return steps.map(step => move(p, step)).filter(point => (pointInMap(point) && signAt(point) === '.'));
-    }
-
-    function pointInMap(p: Point) {
-        return p.x >= 0 && p.y >= 0 && p.x < w && p.y < h;
-    }
+    const startPoint = {
+        x: startIndex % w,
+        y: Math.floor(startIndex / w),
+    };
 
     function signAt(p: Point): string {
         return map[p.y][p.x];
     }
 
-    const outsiders: Point[] = [];
-
-    map.forEach((line, y) => {
-        if ((y === 0 || y === h - 1)) {
-            line.split('').forEach((sign, x) => {
-                if (sign === '.') {
-                    outsiders.push({x, y})
-                }
-            });
-        } else if(line.at(0) === '.') {
-            outsiders.push({x: 0, y})
-        } else if(line.at(-1) === '.') {
-            outsiders.push({x: w - 1, y})
+    const initialDirection = directions.find((direction) => {
+        try {
+            const sign = signAt(move(startPoint, Steps[direction]));
+            return Boolean(sign && sign !== '.');
+        } catch (e) {
+            return false;
         }
     });
 
-    let totalDots = 0;
-    for (let i = 0; i < input.length; i++) {
-        if (input.at(i) === '.') {
-            totalDots += 1;
-        }
+    if (!isDirection(initialDirection)) {
+        throw Error('Should not happen. There must be at one pipe connected to start.');
     }
 
-    for (let i = 0; i < max; i++) {
-        const p = outsiders.pop();
-        if (!p) {
-            return totalDots - marked.size;
+    const path: Point[] = [startPoint];
+
+    for (let distance = 0,
+             point = move(startPoint, Steps[initialDirection]),
+             from = opposite[initialDirection];
+         distance < max;
+         distance++
+    ) {
+        path.push(point);
+        if (samePoint(startPoint, point)) {
+            return path;
         }
-        const index = toIndex(p);
-        if (!marked.has(index)) {
-            marked.add(index);
-            outsiders.push(...(connectedTo(p)));
+
+        const sign = signAt(point);
+        const to = transitions[from][sign];
+
+        if (!isDirection(to)) {
+            throw Error(`Direction must be defined.`);
         }
+
+        point = move(point, Steps[to]);
+        from = opposite[to];
     }
 
     throw Error(`Answer not found in given steps; max=${max}.`);
+}
+
+function print(p: Point, m: string[], zoom=1) {
+    for(let i = p.y - zoom, end = p.y + zoom; i <= end; i += 1) {
+        console.log(m[i].slice(p.x - zoom, p.x + 1 + 2 * zoom));
+    }
+}
+
+export function countEnclosed(input: string, max = 1_000_000) {
+    const map = input.split("\n");
+    const w = map[0].length;
+    const h = map.length;
+
+    let enclosed = 0;
+
+    const path = getPath(input);
+    for (let y = 0; y < h; y += 1) {
+        for (let x = 0, insideLoop = false, entrySign = null; x < w; x += 1) {
+            const sign = map[y][x];
+            let onPath = path.some(p => p.x === x && p.y === y);
+
+            if (insideLoop && sign === ".") {
+                enclosed += 1;
+                console.log('foobar', JSON.stringify({x, y}))
+                print({x, y}, map);
+            } else if (onPath && sign === "|") {
+                insideLoop = !insideLoop;
+            } else if (onPath && ['L', "F"].includes(sign)) {
+                entrySign = sign;
+                insideLoop = !insideLoop;
+            } else if (onPath && ['J', "7"].includes(sign)) {
+                if (entrySign === "L" && sign === "7" || entrySign === "F" && sign === "J") {
+                    insideLoop = !insideLoop;
+                    entrySign = null;
+                } else {
+                    entrySign = null;
+                }
+            }
+        }
+    }
+
+
+    return enclosed;
 }
