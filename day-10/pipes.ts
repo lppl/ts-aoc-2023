@@ -1,3 +1,6 @@
+import {expect, test} from "bun:test";
+import {readFileSync} from "fs";
+
 const enum Direction {
     Top = "Top",
     Bottom = "Bottom",
@@ -49,6 +52,45 @@ const transitions: Record<Direction, Record<string, Direction>> = {
     },
 }
 
+const connectors = {
+    [Direction.Top]: ['|', '7', 'F'],
+    [Direction.Left]: ['-', 'L', 'F'],
+    [Direction.Right]: ['-', '7', 'J'],
+    [Direction.Bottom]: ['|', 'J', 'L'],
+};
+
+const foobar = [
+    ["|", {Top: true, Right: false, Bottom: true, Left: false}],
+    ["-", {Top: false, Right: true, Bottom: false, Left: true}],
+    ["J", {Top: true, Right: false, Bottom: false, Left: true}],
+    ["L", {Top: true, Right: true, Bottom: false, Left: false}],
+    ["F", {Top: false, Right: true, Bottom: true, Left: false}],
+    ["7", {Top: false, Right: false, Bottom: true, Left: true}],
+] as const;
+
+function detectPipe(p: Point, input: string) {
+    const map = input.split('\n').map(l => l.split(''));
+
+    const def = Object.fromEntries(directions.map(dir => {
+        const pp = move(p, Steps[dir]);
+        const sign = map[pp.y] ? map[pp.y][pp.x] : 'outside of map';
+        return [dir, connectors[dir].includes(sign)]
+    }));
+
+    const ret = foobar.find(([, o]) =>
+        def.Top === o.Top &&
+        def.Right === o.Right &&
+        def.Bottom === o.Bottom &&
+        def.Left === o.Left
+    )
+
+    if (!ret) {
+        throw Error("Should not happen");
+    }
+
+    return ret[0];
+}
+
 const s = (v: any) => JSON.stringify(v)
 
 type Point = { x: number, y: number };
@@ -68,6 +110,25 @@ function samePoint(a: Point, b: Point): boolean {
     return a.x === b.x && a.y === b.y;
 }
 
+function getStartDirection(startPipe: string) {
+    switch (startPipe) {
+        case "-":
+            return Direction.Left;
+        case "|":
+            return Direction.Bottom;
+        case "F":
+            return Direction.Right;
+        case "L":
+            return Direction.Right;
+        case "J":
+            return Direction.Left;
+        case "7":
+            return Direction.Left;
+        default:
+            throw Error('Should not happen');
+    }
+}
+
 export function findFurthest(input: string, max = 1_000_000) {
     const map = input.split("\n");
     const w = map[0].length;
@@ -78,15 +139,13 @@ export function findFurthest(input: string, max = 1_000_000) {
         x: startIndex % w,
         y: Math.floor(startIndex / w),
     };
+    const startPipe = detectPipe(startPoint, input);
+    const initialDirection = getStartDirection(startPipe);
 
     function signAt(p: Point): string {
         return map[p.y][p.x];
     }
 
-    const initialDirection = directions.find((direction) => {
-        const sign = signAt(move(startPoint, Steps[direction]));
-        return sign && sign !== '.';
-    });
 
     if (!isDirection(initialDirection)) {
         throw Error('Should not happen. There must be at one pipe connected to start.');
@@ -117,7 +176,7 @@ export function findFurthest(input: string, max = 1_000_000) {
 }
 
 
-export function getPath(input: string, max = 1_000_000): Point[] {
+export function getPath(input: string, max = 1_000_000): { x: number, y: number, sign: string }[] {
     const map = input.split("\n");
     const w = map[0].length;
 
@@ -127,25 +186,19 @@ export function getPath(input: string, max = 1_000_000): Point[] {
         x: startIndex % w,
         y: Math.floor(startIndex / w),
     };
+    const startPipe = detectPipe(startPoint, input);
+    const initialDirection = getStartDirection(startPipe);
 
     function signAt(p: Point): string {
         return map[p.y][p.x];
     }
 
-    const initialDirection = directions.find((direction) => {
-        try {
-            const sign = signAt(move(startPoint, Steps[direction]));
-            return Boolean(sign && sign !== '.');
-        } catch (e) {
-            return false;
-        }
-    });
 
     if (!isDirection(initialDirection)) {
         throw Error('Should not happen. There must be at one pipe connected to start.');
     }
 
-    const path: Point[] = [startPoint];
+    const path: { x: number, y: number, sign: string }[] = [{...startPoint, sign: signAt(startPoint)}];
 
     for (let distance = 0,
              point = move(startPoint, Steps[initialDirection]),
@@ -153,7 +206,7 @@ export function getPath(input: string, max = 1_000_000): Point[] {
          distance < max;
          distance++
     ) {
-        path.push(point);
+        path.push({...point, sign: signAt(point)});
         if (samePoint(startPoint, point)) {
             return path;
         }
@@ -162,6 +215,7 @@ export function getPath(input: string, max = 1_000_000): Point[] {
         const to = transitions[from][sign];
 
         if (!isDirection(to)) {
+            console.log({point, from, to, sign})
             throw Error(`Direction must be defined.`);
         }
 
@@ -172,45 +226,54 @@ export function getPath(input: string, max = 1_000_000): Point[] {
     throw Error(`Answer not found in given steps; max=${max}.`);
 }
 
-function print(p: Point, m: string[], zoom=1) {
-    for(let i = p.y - zoom, end = p.y + zoom; i <= end; i += 1) {
-        console.log(m[i].slice(p.x - zoom, p.x + 1 + 2 * zoom));
+function print(p: Point, input: string, zoom = 1) {
+    const m = input.split('\n');
+    console.log(JSON.stringify(p))
+    for (let i = p.y - zoom, end = p.y + zoom; i <= end; i += 1) {
+        console.log(m[i].slice(p.x - zoom, p.x + 2 * zoom));
     }
+    console.log("")
 }
 
 export function countEnclosed(input: string, max = 1_000_000) {
-    const map = input.split("\n");
+    const map = input.split("\n").map(l => l.split(''));
     const w = map[0].length;
     const h = map.length;
 
     let enclosed = 0;
 
     const path = getPath(input);
-    for (let y = 0; y < h; y += 1) {
-        for (let x = 0, insideLoop = false, entrySign = null; x < w; x += 1) {
-            const sign = map[y][x];
-            let onPath = path.some(p => p.x === x && p.y === y);
 
-            if (insideLoop && sign === ".") {
+    const startPoint = path[0]
+    const startPipe = detectPipe(startPoint, input);
+    map[startPoint.y][startPoint.x] = startPipe;
+    path[0].sign = startPipe;
+
+    for (let y = 0; y < h; y += 1) {
+        let inside = false;
+        let entrySign: string | null = null;
+        for (let x = 0; x < w; x += 1) {
+            const sign = map[y][x];
+            const onPath = path.some(p => p.x === x && p.y === y);
+            if (inside && sign === '.') {
                 enclosed += 1;
-                console.log('foobar', JSON.stringify({x, y}))
-                print({x, y}, map);
-            } else if (onPath && sign === "|") {
-                insideLoop = !insideLoop;
-            } else if (onPath && ['L', "F"].includes(sign)) {
+                // console.log({entrySign, sign, enclosed, inside, onPath})
+                // console.log({line: `${x},${y} ${map[y].join(``)}`})
+            } else if (onPath && sign === '|') {
+                inside = !inside;
+            } else if (onPath && !entrySign && (['F', 'L'].includes(sign))) {
                 entrySign = sign;
-                insideLoop = !insideLoop;
-            } else if (onPath && ['J', "7"].includes(sign)) {
-                if (entrySign === "L" && sign === "7" || entrySign === "F" && sign === "J") {
-                    insideLoop = !insideLoop;
-                    entrySign = null;
-                } else {
-                    entrySign = null;
-                }
+            } else if (onPath && entrySign === 'F' && sign === 'J') {
+                inside = !inside;
+                entrySign = null;
+            } else if (onPath && entrySign === 'L' && sign === '7') {
+                inside = !inside;
+                entrySign = null;
+            } else if (onPath && ['J', '7'].includes(sign)) {
+                entrySign = null;
             }
         }
     }
-
 
     return enclosed;
 }
