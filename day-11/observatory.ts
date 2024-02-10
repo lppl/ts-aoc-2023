@@ -32,3 +32,26 @@ export function expand(galaxy: string): string {
 
     return expanse.map(line => line.join('')).join('\n');
 }
+
+export function countDistance(galaxy: string): number {
+    const stars = [];
+    const lines = galaxy.split('\n');
+
+    for (let y = 0; y < lines.length; y += 1) {
+        const line = lines[y];
+        for(let x = 0; x < line.length; x += 1) {
+            const sign = line[x];
+            if (sign === '#') {
+                stars.push({x, y});
+            }
+        }
+    }
+
+    let distance = 0;
+    for (let s1 = 0; s1 < stars.length - 1; s1 += 1) {
+        for (let s2 = s1 + 1; s2 < stars.length; s2 += 1) {
+            distance += Math.abs(stars[s2].x - stars[s1].x) + Math.abs(stars[s2].y - stars[s1].y);
+        }
+    }
+    return distance;
+}
