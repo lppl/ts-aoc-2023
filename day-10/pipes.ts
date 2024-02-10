@@ -1,6 +1,3 @@
-import {expect, test} from "bun:test";
-import {readFileSync} from "fs";
-
 const enum Direction {
     Top = "Top",
     Bottom = "Bottom",
@@ -255,10 +252,8 @@ export function countEnclosed(input: string, max = 1_000_000) {
         for (let x = 0; x < w; x += 1) {
             const sign = map[y][x];
             const onPath = path.some(p => p.x === x && p.y === y);
-            if (inside && sign === '.') {
+            if (inside && !onPath) {
                 enclosed += 1;
-                // console.log({entrySign, sign, enclosed, inside, onPath})
-                // console.log({line: `${x},${y} ${map[y].join(``)}`})
             } else if (onPath && sign === '|') {
                 inside = !inside;
             } else if (onPath && !entrySign && (['F', 'L'].includes(sign))) {

@@ -79,5 +79,5 @@ L-J
 test("Personal. Part 2", () => {
     const input = readFileSync('./input-personal-2.txt').toString();
     const actual = countEnclosed(input);
-    expect(actual).toBe(-1);
+    expect(actual).toBe(291);
 });
