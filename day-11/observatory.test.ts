@@ -1,6 +1,5 @@
 import {expect, test} from "bun:test";
-import {countDistance, expand} from "./observatory";
-import * as console from "console";
+import {countDistance, countDistanceWithExpand, expand} from "./observatory";
 import {readFileSync} from "fs";
 
 test('Expand. No effect.', () => {
@@ -87,5 +86,36 @@ test('Count distance. Sample 1.', () => {
 
 test('Personal. Part 1', () => {
     const input = readFileSync('./input-personal-part-1.txt').toString();
-    expect(countDistance(expand(input))).toBe(-1);
+    expect(countDistance(expand(input))).toBe(9724940);
+})
+
+
+test('Count distance part II. No expansion.', () => {
+    const input = `#.\n.#`.trim();
+    expect(countDistanceWithExpand(input, 2)).toBe(2);
+})
+
+test('Count distance part II. Expansion in vertical', () => {
+    const input = `#.\n..\n.#`;
+    expect(countDistanceWithExpand(input, 2)).toBe(4);
+})
+
+test('Count distance part II. Expansion in horizontal.', () => {
+    const input = `#..\n..#`;
+    expect(countDistanceWithExpand(input, 2)).toBe(4);
+})
+
+test('Count distance part II. Expansion in vertical', () => {
+    const input = `#.\n..\n.#`;
+    expect(countDistanceWithExpand(input, 1_000_000)).toBe(1_000_002);
+})
+
+test('Count distance part II. Expansion in horizontal.', () => {
+    const input = `#..\n..#`;
+    expect(countDistanceWithExpand(input, 1_000_000)).toBe(1_000_002);
+})
+
+test('Personal. Part 2', () => {
+    const input = readFileSync('./input-personal-part-1.txt').toString();
+    expect(countDistanceWithExpand(input)).toBe(569052586852);
 })

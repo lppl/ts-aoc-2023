@@ -39,10 +39,45 @@ export function countDistance(galaxy: string): number {
 
     for (let y = 0; y < lines.length; y += 1) {
         const line = lines[y];
-        for(let x = 0; x < line.length; x += 1) {
+        for (let x = 0; x < line.length; x += 1) {
             const sign = line[x];
             if (sign === '#') {
                 stars.push({x, y});
+            }
+        }
+    }
+
+    let distance = 0;
+    for (let s1 = 0; s1 < stars.length - 1; s1 += 1) {
+        for (let s2 = s1 + 1; s2 < stars.length; s2 += 1) {
+            distance += Math.abs(stars[s2].x - stars[s1].x) + Math.abs(stars[s2].y - stars[s1].y);
+        }
+    }
+    return distance;
+}
+
+export function countDistanceWithExpand(galaxy: string, expand_cost = 1_000_000): number {
+    const stars = [];
+    const lines = galaxy.split('\n');
+
+    const colCost = new Array(lines[0].length).fill(expand_cost);
+    const rowCost = new Array(lines.length).fill(expand_cost);
+
+    for (let y = 0; y < lines.length; y += 1) {
+        const line = lines[y];
+        for (let x = 0; x < line.length; x += 1) {
+            if (line[x] === '#') {
+                colCost[x] = 1;
+                rowCost[y] = 1;
+            }
+        }
+    }
+
+    for (let y = 0, offsetY = 0; y < lines.length; y += 1, offsetY += rowCost[y]) {
+        const line = lines[y];
+        for (let x = 0, offsetX = 0; x < line.length; x += 1, offsetX += colCost[x]) {
+            if (line[x] === '#') {
+                stars.push({x: offsetX, y: offsetY});
             }
         }
     }
